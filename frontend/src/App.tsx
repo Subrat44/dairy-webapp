@@ -1,5 +1,3 @@
-import React from "react";
-
 const products = [
   { id: 1, name: "Milk", price: "₹50 / litre" },
   { id: 2, name: "Paneer", price: "₹400 / kg" },
