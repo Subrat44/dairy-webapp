@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dairy-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: dairy-frontend
+  template:
+    metadata:
+      labels:
+        app: dairy-frontend
+    spec:
+      containers:
+      - name: dairy-frontend
+        image: subrat44/dairy-frontend:latest
+        ports:
+        - containerPort: 80
