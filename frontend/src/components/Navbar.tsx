@@ -7,6 +7,7 @@ export default function Navbar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const { cart } = useCart();
+  const token = localStorage.getItem("token");
   const location = useLocation();
 
   const totalQty = (cart as any[]).reduce(
@@ -51,7 +52,22 @@ export default function Navbar() {
           </div>
 
           <div className="flex items-center gap-3">
-            {/* Cart button */}
+            
+{token ? (
+  <button
+    onClick={() => { localStorage.removeItem("token"); window.location.reload(); }}
+    className="text-sm font-medium text-gray-600 hover:text-red-500 transition-colors"
+  >
+    Logout
+  </button>
+) : (
+  <a
+    href="/login"
+    className="text-sm font-semibold text-emerald-600 border border-emerald-200 px-4 py-2 rounded-xl hover:bg-emerald-50 transition-colors"
+  >
+    Login
+  </a>
+)}
             <button
               onClick={() => setDrawerOpen(true)}
               className="relative flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-semibold text-sm transition-all active:scale-95"

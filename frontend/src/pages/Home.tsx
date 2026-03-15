@@ -165,7 +165,7 @@ export default function Home() {
 
         {/* PRODUCTS */}
         <FadeSection>
-          <ProductGrid activeCategory={activeCategory} />
+          <ProductGrid />
         </FadeSection>
 
         {/* WHY US */}

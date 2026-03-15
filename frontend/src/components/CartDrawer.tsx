@@ -31,30 +31,80 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [onClose]);
 
-  const handleCheckout = async () => {
-    // Razorpay integration hook point
+ const handleCheckout = async () => {
+  const orderData = {
+    items: items.map((item: any) => ({
+      product_id: item.id || item._id,
+      name: item.name,
+      price: item.price,
+      quantity: item.qty ?? 1,
+    })),
+    total_amount: total,
+    delivery_address: "123 Main St, Bengaluru", // we'll make this dynamic later
+  };
+
+  try {
+    // Step 1 — Create order in backend
+    const orderRes = await fetch(`${import.meta.env.VITE_API_URL}/api/orders/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+      body: JSON.stringify(orderData),
+    });
+
+    if (!orderRes.ok) throw new Error("Order creation failed");
+    const order = await orderRes.json();
+
+    // Step 2 — Open Razorpay
+    if (!(window as any).Razorpay) {
+      alert("Razorpay not loaded");
+      return;
+    }
+
     const options = {
       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-      amount: total * 100, // in paise
+      amount: total * 100,
       currency: "INR",
       name: "DairyHub",
       description: "Fresh Dairy Order",
-      handler: function (response: any) {
-        alert(`Payment successful! ID: ${response.razorpay_payment_id}`);
-        clearCart();
-        onClose();
+      order_id: order.razorpay_order_id,
+      handler: async (response: any) => {
+        // Step 3 — Verify payment
+        const verifyRes = await fetch(
+          `${import.meta.env.VITE_API_URL}/api/payments/verify`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              order_id: order.id,
+            }),
+          }
+        );
+
+        if (verifyRes.ok) {
+          alert("🎉 Order placed successfully!");
+          clearCart();
+          onClose();
+        } else {
+          alert("Payment verification failed");
+        }
       },
-      prefill: { name: "", email: "", contact: "" },
+      prefill: { name: "Subrat", email: "kumarskp920@gmail.com" },
       theme: { color: "#059669" },
     };
 
-    if ((window as any).Razorpay) {
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } else {
-      alert("Razorpay SDK not loaded. Add script to index.html.");
-    }
-  };
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
+  } catch (err) {
+    alert("Something went wrong. Are you logged in?");
+    console.error(err);
+  }
+};
 
   return (
     <>
