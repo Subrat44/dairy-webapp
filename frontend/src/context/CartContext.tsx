@@ -1,4 +1,4 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useContext } from "react";
 
 export const CartContext = createContext<any>(null);
 
@@ -51,3 +51,5 @@ export function CartProvider({ children }: any) {
     </CartContext.Provider>
   );
 }
+
+export const useCart = () => useContext(CartContext);

@@ -1,19 +1,146 @@
+---
+# Namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dairyhub
+
+---
+# ConfigMap for environment variables
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dairyhub-config
+  namespace: dairyhub
+data:
+  VITE_API_URL: "https://api.dairyhub.in"
+
+---
+# Secret for sensitive keys (base64-encode your values)
+# kubectl create secret generic dairyhub-secrets --from-literal=VITE_RAZORPAY_KEY_ID=rzp_live_xxx -n dairyhub
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dairyhub-secrets
+  namespace: dairyhub
+type: Opaque
+data:
+  VITE_RAZORPAY_KEY_ID: ""   # base64 encoded value
+
+---
+# Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: dairy-frontend
+  name: dairyhub-frontend
+  namespace: dairyhub
+  labels:
+    app: dairyhub-frontend
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: dairy-frontend
+      app: dairyhub-frontend
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
   template:
     metadata:
       labels:
-        app: dairy-frontend
+        app: dairyhub-frontend
     spec:
       containers:
-      - name: dairy-frontend
-        image: subrat44/dairy-frontend:latest
-        ports:
-        - containerPort: 80
+        - name: frontend
+          image: subrat44/dairyhub-frontend:latest  # replace with your image
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+          envFrom:
+            - configMapRef:
+                name: dairyhub-config
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+---
+# Service (ClusterIP — exposed via Ingress)
+apiVersion: v1
+kind: Service
+metadata:
+  name: dairyhub-frontend-svc
+  namespace: dairyhub
+spec:
+  selector:
+    app: dairyhub-frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+
+---
+# Ingress (requires nginx-ingress-controller + cert-manager for TLS)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: dairyhub-ingress
+  namespace: dairyhub
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - dairyhub.in
+      secretName: dairyhub-tls
+  rules:
+    - host: dairyhub.in
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: dairyhub-frontend-svc
+                port:
+                  number: 80
+
+---
+# Horizontal Pod Autoscaler
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: dairyhub-hpa
+  namespace: dairyhub
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: dairyhub-frontend
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60
