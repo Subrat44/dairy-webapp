@@ -12,12 +12,8 @@ app = FastAPI(
 # CORS — allow React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",   # Vite dev
-        "http://localhost:8080",   # Docker/K8s
-        "https://dairyhub.in",     # Production
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
