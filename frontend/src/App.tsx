@@ -1,3 +1,4 @@
+import Register from "./pages/Register";
 import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -12,6 +13,7 @@ function App() {
     <>
       <Navbar />
       <Routes>
+        <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Home />} />
         <Route path="/cart" element={<Cart />} />
